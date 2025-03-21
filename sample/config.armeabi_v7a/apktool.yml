@@ -1,0 +1,19 @@
+version: 2.11.1
+apkFileName: config.armeabi_v7a.apk
+isFrameworkApk: false
+usesFramework:
+  ids:
+  - 1
+  tag: null
+sdkInfo:
+packageInfo:
+  forcedPackageId: null
+  renameManifestPackage: null
+versionInfo:
+  versionCode: 10110802
+  versionName: null
+sharedLibrary: false
+sparseResources: true
+compactEntries: true
+doNotCompress:
+- so
