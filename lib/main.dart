@@ -1,205 +1,256 @@
-import 'package:english_words/english_words.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart'; // For folder selection dialog
 
 void main() {
-  runApp(MyApp());
+  runApp(const NCryptorApp());
 }
 
-class FavoritesPage extends StatelessWidget {
+class NCryptorApp extends StatelessWidget {
+  const NCryptorApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    return MaterialApp(
+      title: 'Folder Browser App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const FolderBrowser(),
+    );
+  }
+}
 
-    if (appState.favorites.isEmpty) {
-      return Center(
-        child: Text('No favorites yet.'),
+class FolderBrowser extends StatefulWidget {
+  const FolderBrowser({super.key});
+
+  @override
+  State<FolderBrowser> createState() => _FolderBrowserState();
+}
+
+class _FolderBrowserState extends State<FolderBrowser> {
+  Directory? _currentDirectory;
+  List<FileSystemEntity> _items = [];
+  List<Directory> _storageLocations = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialDirectory();
+    _loadStorageLocations();
+  }
+
+  Future<void> _loadInitialDirectory() async {
+    // Start with the application documents directory
+    final directory = await getApplicationDocumentsDirectory();
+    _navigateToDirectory(directory);
+  }
+
+  Future<void> _loadStorageLocations() async {
+    _storageLocations.clear();
+
+    if (Platform.isAndroid) {
+      if (await Permission.storage.request().isGranted) {
+        final externalDir = await getExternalStorageDirectory();
+        if (externalDir != null) {
+          _storageLocations.add(externalDir);
+        }
+      }
+    } else if (Platform.isIOS) {
+      final documentsDir = await getApplicationDocumentsDirectory();
+      _storageLocations.add(documentsDir);
+      final libraryDir = await getLibraryDirectory();
+      _storageLocations.add(libraryDir);
+    } else if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
+      final homeDir = Directory(Platform.environment['HOME']!);
+      _storageLocations.add(homeDir);
+      final documentsDir = await getApplicationDocumentsDirectory();
+      _storageLocations.add(documentsDir);
+    }
+
+    final appDocDir = await getApplicationDocumentsDirectory();
+    if (!_storageLocations.contains(appDocDir)) {
+      _storageLocations.insert(0, appDocDir);
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _navigateToDirectory(Directory directory) async {
+    setState(() {
+      _currentDirectory = directory;
+      _items.clear();
+    });
+
+    try {
+      final contents = directory.listSync();
+      setState(() {
+        _items = contents;
+        _items.sort((a, b) {
+          if (a is Directory && b is! Directory) {
+            return -1; // Directories first
+          } else if (a is! Directory && b is Directory) {
+            return 1; // Files after directories
+          } else {
+            return a.path.toLowerCase().compareTo(b.path.toLowerCase());
+          }
+        });
+      });
+    } catch (e) {
+      print("Error accessing directory: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Could not access directory: ${directory.path}")),
       );
     }
-
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text('You have '
-              '${appState.favorites.length} favorites:'),
-        ),
-        for (var pair in appState.favorites)
-          ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text(pair.asLowerCase),
-          ),
-      ],
-    );
   }
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  Future<void> _goUpDirectory() async {
+    if (_currentDirectory != null && _currentDirectory!.parent.path != _currentDirectory!.path) {
+      _navigateToDirectory(_currentDirectory!.parent);
+    }
+  }
+
+  Future<String> _getStorageLocationName(Directory dir) async {
+    if (Platform.isAndroid) {
+      final externalDir = await getExternalStorageDirectory();
+      if (dir == externalDir) {
+        return 'External Storage';
+      }
+    }
+    final documentsDir = await getApplicationDocumentsDirectory();
+    if (dir == documentsDir) {
+      return 'Documents';
+    }
+    if (Platform.isIOS) {
+      final libraryDir = await getLibraryDirectory();
+      if (dir == libraryDir) {
+        return 'Library';
+      }
+    }
+    if ((Platform.isLinux || Platform.isMacOS || Platform.isWindows) && dir.path == Platform.environment['HOME']!) {
+      return 'Home';
+    }
+    return 'Storage';
+  }
+
+  Future<void> _selectFolder() async {
+    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+
+    if (selectedDirectory != null) {
+      _navigateToDirectory(Directory(selectedDirectory));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'Namer App',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
-        ),
-        home: MyHomePage(),
-      ),
-    );
-  }
-}
-
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
-
-  void getNext() {
-    current = WordPair.random();
-    notifyListeners();
-  }
-
-  var favorites = <WordPair>[];
-
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget page;
-    switch (selectedIndex) {
-      case 0:
-        page = GeneratorPage();
-        break;
-      case 1:
-        page = FavoritesPage();
-        break;
-      default:
-        throw UnimplementedError('no widget for $selectedIndex');
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Scaffold(
-          body: Row(
-            children: [
-              SafeArea(
-                child: NavigationRail(
-                  extended: constraints.maxWidth >= 600,
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text('Home'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text('Favorites'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Folder Browser'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(100.0),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    if (_currentDirectory?.parent.path != _currentDirectory?.path)
+                      ElevatedButton.icon(
+                        onPressed: _goUpDirectory,
+                        icon: const Icon(Icons.arrow_upward),
+                        label: const Text('Up'),
+                      ),
+                    const SizedBox(width: 8.0),
+                    Expanded(
+                      child: Text(
+                        _currentDirectory?.path ?? 'No directory selected',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value) {
-                    setState(() {
-                      selectedIndex = value;
-                    });
-                  },
                 ),
-              ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
+                const SizedBox(height: 8.0),
+                ElevatedButton.icon(
+                  onPressed: _selectFolder,
+                  icon: const Icon(Icons.folder_open),
+                  label: const Text('Select Folder'),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
-    );
-  }
-}
-
-class GeneratorPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var pair = appState.current;
-
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
-    }
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          BigCard(pair: pair),
-          SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorite();
-                },
-                icon: Icon(icon),
-                label: Text('Like'),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.getNext();
-                },
-                child: Text('Next'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BigCard extends StatelessWidget {
-  const BigCard({super.key, required this.pair});
-
-  final WordPair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.copyWith(
-      color: theme.colorScheme.onPrimary,
-    );
-
-    return Card(
-      color: theme.colorScheme.primary,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(
-          pair.asLowerCase,
-          style: style,
-          semanticsLabel: "${pair.first} ${pair.second}",
         ),
       ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+              child: Text(
+                'Storage Locations',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                ),
+              ),
+            ),
+            for (final location in _storageLocations)
+              FutureBuilder<String>(
+                future: _getStorageLocationName(location),
+                builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+                  if (snapshot.hasData) {
+                    return ListTile(
+                      title: Text(snapshot.data!),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToDirectory(location);
+                      },
+                    );
+                  } else if (snapshot.hasError) {
+                    return ListTile(
+                      title: const Text('Error loading name'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToDirectory(location);
+                      },
+                    );
+                  } else {
+                    return const ListTile(
+                      title: Text('Loading...'),
+                    );
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
+      body: _items.isEmpty
+          ? const Center(child: Text('This folder is empty.'))
+          : ListView.builder(
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                final item = _items[index];
+                return ListTile(
+                  leading: Icon(item is Directory ? Icons.folder : Icons.file_open),
+                  title: Text(item.path.split(Platform.pathSeparator).last),
+                  onTap: () {
+                    if (item is Directory) {
+                      _navigateToDirectory(item);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Selected file: ${item.path}')),
+                      );
+                    }
+                  },
+                );
+              },
+            ),
     );
   }
 }
