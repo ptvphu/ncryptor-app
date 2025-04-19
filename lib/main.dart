@@ -64,8 +64,10 @@ class _FolderBrowserState extends State<FolderBrowser> {
       final libraryDir = await getLibraryDirectory();
       _storageLocations.add(libraryDir);
     } else if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
-      final homeDir = Directory(Platform.environment['HOME']!);
-      _storageLocations.add(homeDir);
+      final homeDir = Directory(Platform.environment['HOME'] ?? '');
+      if (homeDir.existsSync()) {
+        _storageLocations.add(homeDir);
+      }
       final documentsDir = await getApplicationDocumentsDirectory();
       _storageLocations.add(documentsDir);
     }
@@ -102,9 +104,11 @@ class _FolderBrowserState extends State<FolderBrowser> {
       });
     } catch (e) {
       print("Error accessing directory: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not access directory: ${directory.path}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Could not access directory: ${directory.path}")),
+        );
+      }
     }
   }
 
@@ -117,21 +121,23 @@ class _FolderBrowserState extends State<FolderBrowser> {
   Future<String> _getStorageLocationName(Directory dir) async {
     if (Platform.isAndroid) {
       final externalDir = await getExternalStorageDirectory();
-      if (dir == externalDir) {
+      if (dir.path == externalDir?.path) {
         return 'External Storage';
       }
     }
     final documentsDir = await getApplicationDocumentsDirectory();
-    if (dir == documentsDir) {
+    if (dir.path == documentsDir.path) {
       return 'Documents';
     }
     if (Platform.isIOS) {
       final libraryDir = await getLibraryDirectory();
-      if (dir == libraryDir) {
+      if (dir.path == libraryDir.path) {
         return 'Library';
       }
     }
-    if ((Platform.isLinux || Platform.isMacOS || Platform.isWindows) && dir.path == Platform.environment['HOME']!) {
+    if ((Platform.isLinux || Platform.isMacOS || Platform.isWindows) &&
+        Platform.environment['HOME'] != null &&
+        dir.path == Platform.environment['HOME']) {
       return 'Home';
     }
     return 'Storage';
@@ -140,9 +146,14 @@ class _FolderBrowserState extends State<FolderBrowser> {
   Future<void> _selectFolder() async {
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
 
-    if (selectedDirectory != null) {
+    if (selectedDirectory != null && mounted) {
+      // Directly use the selected directory path without creating a new nested directory
       _navigateToDirectory(Directory(selectedDirectory));
     }
+  }
+
+  String _getFileName(FileSystemEntity entity) {
+    return entity.path.split(Platform.pathSeparator).last;
   }
 
   @override
@@ -207,6 +218,10 @@ class _FolderBrowserState extends State<FolderBrowser> {
                   if (snapshot.hasData) {
                     return ListTile(
                       title: Text(snapshot.data!),
+                      subtitle: Text(
+                        location.path,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         _navigateToDirectory(location);
@@ -236,11 +251,24 @@ class _FolderBrowserState extends State<FolderBrowser> {
               itemCount: _items.length,
               itemBuilder: (context, index) {
                 final item = _items[index];
+                final fileName = _getFileName(item);
+                final isDirectory = item is Directory;
+
                 return ListTile(
-                  leading: Icon(item is Directory ? Icons.folder : Icons.file_open),
-                  title: Text(item.path.split(Platform.pathSeparator).last),
+                  leading: Icon(
+                    isDirectory ? Icons.folder : Icons.insert_drive_file,
+                    color: isDirectory ? Colors.amber : Colors.blue,
+                  ),
+                  title: Text(fileName),
+                  subtitle: Text(
+                    isDirectory ? 'Directory' : 'File',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
                   onTap: () {
-                    if (item is Directory) {
+                    if (isDirectory) {
                       _navigateToDirectory(item);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
