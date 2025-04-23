@@ -17,7 +17,7 @@ class RcloneManager {
   static Future<String> _initRclone() async {
     final appDir = await getApplicationSupportDirectory();
     final binDir = Directory('${appDir.path}/bin');
-    
+
     // Create bin directory if it doesn't exist
     if (!await binDir.exists()) {
       await binDir.create(recursive: true);
@@ -30,9 +30,10 @@ class RcloneManager {
     if (await rcloneFile.exists()) {
       // Validate the existing binary (optional)
       try {
-        final result = await run('$rclonePath version');
-        if (result.exitCode == 0 && result.stdout.toString().contains('rclone')) {
-          return rclonePath;  // Binary exists and works
+        final results = await run('$rclonePath version');
+        if (results[0].exitCode == 0 &&
+            results[0].stdout.toString().contains('rclone')) {
+          return rclonePath; // Binary exists and works
         }
       } catch (e) {
         // Binary exists but doesn't work, will be replaced
@@ -42,19 +43,19 @@ class RcloneManager {
     // Install the appropriate binary for the current architecture
     String arch = _getArchitecture();
     String assetPath = '$_assetBasePath$arch/rclone';
-    
+
     try {
       // Copy binary from assets
       ByteData data = await rootBundle.load(assetPath);
       List<int> bytes = data.buffer.asUint8List(
-        data.offsetInBytes, 
-        data.lengthInBytes
+        data.offsetInBytes,
+        data.lengthInBytes,
       );
       await rcloneFile.writeAsBytes(bytes);
-      
+
       // Make executable
       await _makeExecutable(rclonePath);
-      
+
       return rclonePath;
     } catch (e) {
       throw Exception('Failed to install rclone: $e');
@@ -88,7 +89,7 @@ class RcloneManager {
       // Windows is typically x86_64
       return 'x86_64';
     }
-    
+
     // Default to x86_64 if we can't determine
     return 'x86_64';
   }
@@ -118,7 +119,7 @@ class RcloneManager {
     if (Platform.isWindows) {
       return; // No need to make files executable on Windows
     }
-    
+
     try {
       final result = await Process.run('chmod', ['+x', filePath]);
       if (result.exitCode != 0) {
@@ -130,17 +131,19 @@ class RcloneManager {
   }
 
   // Run rclone command
-  static Future<ProcessResult> runRclone(List<String> arguments) async {
+  static Future<ProcessResult> runRclone(List arguments) async {
     final rclonePath = await getRclonePath();
-    return run('$rclonePath ${arguments.join(' ')}');
+    final results = await run('$rclonePath ${arguments.join(' ')}');
+    return results[0];
   }
 
   // Run rclone command with a config file
   static Future<ProcessResult> runRcloneWithConfig(
-    List<String> arguments, 
-    String configPath
+    List<String> arguments,
+    String configPath,
   ) async {
     final rclonePath = await getRclonePath();
-    return run('$rclonePath ${arguments.join(' ')} --config $configPath');
+    final results = await run('$rclonePath ${arguments.join(' ')} --config $configPath');
+    return results[0];
   }
 }

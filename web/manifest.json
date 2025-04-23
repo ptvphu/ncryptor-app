@@ -1,6 +1,6 @@
 {
-    "name": "ncryptor_ui",
-    "short_name": "ncryptor_ui",
+    "name": "ncryptor",
+    "short_name": "ncryptor",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

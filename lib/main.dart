@@ -2,10 +2,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // For secure storage
 import 'package:flutter/material.dart';
-import 'package:ncryptor_ui/RcloneManager.dart';
+import 'package:ncryptor/rclone_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:process_run/process_run.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -731,7 +730,7 @@ pass = ${_rcloneSettings.pass}
                   ),
                   onTap: () {
                     if (isDirectory) {
-                      _navigateToDirectory(item as Directory);
+                      _navigateToDirectory(item);
                     } else {
                       _showSnackBar('Selected file: ${item.path}');
 

@@ -1,4 +1,4 @@
-package com.example.ncryptor_ui
+package com.datalocker.ncryptor
 
 import io.flutter.embedding.android.FlutterActivity
 

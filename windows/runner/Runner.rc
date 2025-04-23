@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "ncryptor_ui" "\0"
+            VALUE "CompanyName", "com.datalocker" "\0"
+            VALUE "FileDescription", "ncryptor" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ncryptor_ui" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ncryptor_ui.exe" "\0"
-            VALUE "ProductName", "ncryptor_ui" "\0"
+            VALUE "InternalName", "ncryptor" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.datalocker. All rights reserved." "\0"
+            VALUE "OriginalFilename", "ncryptor.exe" "\0"
+            VALUE "ProductName", "ncryptor" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
