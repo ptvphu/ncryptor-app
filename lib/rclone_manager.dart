@@ -94,6 +94,52 @@ class RcloneManager {
     return 'x86_64';
   }
 
+  Future<String> getDeviceAbi() async {
+    // Use method channel to get device ABI
+    const platform = MethodChannel('ncryptor/native');
+    try {
+      final String abi = await platform.invokeMethod('getAbi');
+      return abi;
+    } catch (e) {
+      print('Failed to get device ABI: $e');
+      // Default to arm64-v8a as fallback
+      return 'arm64-v8a';
+    }
+  }
+
+  Future<void> runExecutableForCurrentAbi() async {
+    if (Platform.isAndroid) {
+      try {
+        // Get device ABI
+        final String abi = await getDeviceAbi();
+
+        // Get a writable directory
+        final directory = await getApplicationDocumentsDirectory();
+        final executablePath = '${directory.path}/rclone';
+
+        // Copy from appropriate ABI-specific assets folder
+        final ByteData data = await rootBundle.load(
+          'assets/$abi/rclone',
+        );
+        final List<int> bytes = data.buffer.asUint8List(
+          data.offsetInBytes,
+          data.lengthInBytes,
+        );
+        await File(executablePath).writeAsBytes(bytes);
+
+        // Make executable
+        await Process.run('chmod', ['+x', executablePath]);
+
+        // Run the executable
+        final process = await Process.run(executablePath, []);
+        print('Exit code: ${process.exitCode}');
+        print('Output: ${process.stdout}');
+      } catch (e) {
+        print('Error: $e');
+      }
+    }
+  }
+
   // Helper method to check for Apple Silicon
   static bool _isAppleSilicon() {
     try {
@@ -143,7 +189,9 @@ class RcloneManager {
     String configPath,
   ) async {
     final rclonePath = await getRclonePath();
-    final results = await run('$rclonePath ${arguments.join(' ')} --config $configPath');
+    final results = await run(
+      '$rclonePath ${arguments.join(' ')} --config $configPath',
+    );
     return results[0];
   }
 }
