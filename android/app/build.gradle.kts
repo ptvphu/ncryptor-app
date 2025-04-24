@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.datalocker.ncryptor"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -20,25 +20,91 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.datalocker.ncryptor"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Add test instrumentation runner if you use Android tests
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            // These would typically come from environment variables or local.properties
+            // Uncomment and configure these for release builds
+            // storeFile = file("your-release.keystore")
+            // storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+            // keyAlias = System.getenv("KEY_ALIAS") ?: ""
+            // keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        }
     }
 
     buildTypes {
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Uncomment next line when signingConfig is properly set up
+            // signingConfig = signingConfigs.getByName("release")
+            // For now, use debug signing so `flutter run --release` works
             signingConfig = signingConfigs.getByName("debug")
+            
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
+    flavorDimensions.add("environment")
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+        }
+        create("prod") {
+            dimension = "environment"
+        }
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = true
+        disable.add("InvalidPackage")
+        // Enable more checks as needed
+    }
+
+    bundle {
+        language {
+            enableSplit = true
+        }
+        density {
+            enableSplit = true
+        }
+        abi {
+            enableSplit = true
+        }
+    }
+
+    // Configure path to custom ProGuard rules if needed
+    // proguardFiles("path/to/custom-rules.pro")
 }
 
 flutter {
     source = "../.."
+}
+
+// Optional: Add dependencies here if you need any Android-specific libraries
+dependencies {
+    // Examples:
+    // implementation("androidx.core:core-ktx:1.12.0")
+    // implementation("androidx.appcompat:appcompat:1.6.1")
+    
+    // Test dependencies
+    // testImplementation("junit:junit:4.13.2")
+    // androidTestImplementation("androidx.test.ext:junit:1.1.5")
 }
