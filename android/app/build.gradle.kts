@@ -10,6 +10,10 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
+    aaptOptions {
+        noCompress.add("so")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -28,6 +32,9 @@ android {
         
         // Add test instrumentation runner if you use Android tests
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"))
+        }
     }
 
     signingConfigs {
@@ -38,6 +45,21 @@ android {
             // storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
             // keyAlias = System.getenv("KEY_ALIAS") ?: ""
             // keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            assets.srcDirs("src/main/assets")
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = true  // Also generate a universal APK with all ABIs
         }
     }
 
