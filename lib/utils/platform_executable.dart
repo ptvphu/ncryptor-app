@@ -38,7 +38,7 @@ class PlatformExecutable {
   static Future<String> _getArchitecture() async {
     if (Platform.isAndroid) {
       // Use method channel to get Android ABI
-      const platform = MethodChannel('your_app/native');
+      const platform = MethodChannel('ncryptor/native');
       try {
         return await platform.invokeMethod('getAbi');
       } catch (e) {

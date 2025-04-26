@@ -24,18 +24,17 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter:
-  # assets:
-  #   - assets/common/
-  #   - assets/android/arm64-v8a/
-  #   - assets/android/armeabi-v7a/
-  #   - assets/android/x86/
-  #   - assets/android/x86_64/
-  #   - assets/ios/arm64/
-  #   - assets/ios/x86_64/
-  #   - assets/windows/x86/
-  #   - assets/windows/x64/
-  #   - assets/macos/arm64/
-  #   - assets/macos/x86_64/
-  #   - assets/linux/x86_64/
-  #   - assets/linux/arm64/
+  assets:
+    - assets/android/arm64-v8a/rclone
+    # - assets/android/armeabi-v7a/rclone
+    # - assets/android/x86_64/rclone
+    # - assets/android/x86/rclone
+    # - assets/ios/arm64/
+    # - assets/ios/x86_64/
+    # - assets/linux/arm64/
+    # - assets/linux/x86_64/
+    # - assets/macos/arm64/
+    # - assets/macos/x86_64/
+    # - assets/windows/x64/
+    # - assets/windows/x86/
   uses-material-design: true
