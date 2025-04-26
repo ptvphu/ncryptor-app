@@ -31,13 +31,13 @@ jobs:
         run: flutter pub get
       
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --flavor prod --release --target-platform android-arm64
       
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-prod-release.apk
 
   build_windows:
     name: Build Windows
@@ -164,7 +164,7 @@ jobs:
           prerelease: false
           tag_name: ${{ inputs.version }}
           files: |
-            android-release/app-release.apk
+            android-release/app-prod-release.apk
             windows-release/windows-release.zip
             macos-release/macos-release.dmg
             linux-release/linux-release.tar.gz
@@ -172,7 +172,7 @@ jobs:
             ## Release ${{ inputs.version }}
             
             ### Downloads
-            - **Android**: [APK](https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/app-release.apk)
+            - **Android**: [APK](https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/app-prod-release.apk)
             - **Windows**: [ZIP](https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/windows-release.zip)
             - **macOS**: [DMG](https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/macos-release.dmg)
             - **Linux**: [TAR.GZ](https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/linux-release.tar.gz)
