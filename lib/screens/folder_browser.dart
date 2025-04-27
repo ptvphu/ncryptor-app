@@ -25,7 +25,6 @@ class _FolderBrowserState extends State<FolderBrowser> {
   bool _isLoading = false;
   final _secureStorage = const FlutterSecureStorage();
 
-  // rclone settings
   late RcloneSettings _rcloneSettings;
 
   @override
@@ -60,13 +59,11 @@ class _FolderBrowserState extends State<FolderBrowser> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Load non-sensitive data from SharedPreferences
       final host = prefs.getString('ftpHost') ?? '';
       final port = prefs.getString('ftpPort') ?? '21';
       final user = prefs.getString('ftpUser') ?? '';
       final remoteName = prefs.getString('rcloneRemoteName') ?? 'myftp';
 
-      // Load sensitive data from secure storage
       String pass = '';
       try {
         pass = await _secureStorage.read(key: 'ftpPass') ?? '';
@@ -92,13 +89,11 @@ class _FolderBrowserState extends State<FolderBrowser> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Save non-sensitive data to SharedPreferences
       await prefs.setString('ftpHost', _rcloneSettings.host);
       await prefs.setString('ftpPort', _rcloneSettings.port);
       await prefs.setString('ftpUser', _rcloneSettings.user);
       await prefs.setString('rcloneRemoteName', _rcloneSettings.remoteName);
 
-      // Save sensitive data to secure storage
       await _secureStorage.write(key: 'ftpPass', value: _rcloneSettings.pass);
     } catch (e) {
       _showSnackBar('Error saving settings: $e');
@@ -230,8 +225,14 @@ class _FolderBrowserState extends State<FolderBrowser> {
   Future<void> _selectFolder() async {
     try {
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+
       if (selectedDirectory != null && mounted) {
-        await _navigateToDirectory(Directory(selectedDirectory));
+        final selectedDir = Directory(selectedDirectory);
+        if (await selectedDir.exists()) {
+          await _navigateToDirectory(selectedDir);
+        } else {
+          _showSnackBar('Selected directory does not exist');
+        }
       }
     } catch (e) {
       _showSnackBar('Error selecting folder: $e');
@@ -248,14 +249,12 @@ class _FolderBrowserState extends State<FolderBrowser> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // Handle file or directory tap
   void _handleItemTap(FileSystemEntity item) {
     if (item is Directory) {
       _navigateToDirectory(item);
     } else {
-      _showSnackBar('Selected file: ${item.path}');
+      _showSnackBar('Selected file: ${_getFileName(item)}');
 
-      // You could add file preview/operations here
       showModalBottomSheet(
         context: context,
         builder: (context) => Column(
@@ -264,9 +263,20 @@ class _FolderBrowserState extends State<FolderBrowser> {
             ListTile(
               leading: const Icon(Icons.info),
               title: Text(_getFileName(item)),
+              subtitle: FutureBuilder<FileStat>(
+                future: item.stat(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final modified = snapshot.data!.modified;
+                    final size = snapshot.data!.size;
+                    final sizeStr = _formatFileSize(size);
+                    return Text('$sizeStr • ${modified.toString().substring(0, 16)}');
+                  }
+                  return const Text('Loading...');
+                },
+              ),
               onTap: () {
                 Navigator.pop(context);
-                // Show file info
               },
             ),
             ListTile(
@@ -274,15 +284,14 @@ class _FolderBrowserState extends State<FolderBrowser> {
               title: const Text('Share'),
               onTap: () {
                 Navigator.pop(context);
-                // Share file
               },
             ),
             ListTile(
               leading: const Icon(Icons.delete),
               title: const Text('Delete'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                // Delete file
+                await _deleteFile(item as File);
               },
             ),
           ],
@@ -291,7 +300,50 @@ class _FolderBrowserState extends State<FolderBrowser> {
     }
   }
 
-  // --- rclone Integration ---
+  Future<void> _deleteFile(File file) async {
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: Text('Are you sure you want to delete ${_getFileName(file)}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      ) ?? false;
+
+      if (confirmed) {
+        await file.delete();
+        _showSnackBar('File deleted successfully');
+        if (_currentDirectory != null) {
+          _navigateToDirectory(_currentDirectory!);
+        }
+      }
+    } catch (e) {
+      _showSnackBar('Error deleting file: $e');
+    }
+  }
+
+  String _formatFileSize(int size) {
+    if (size < 1024) {
+      return '$size B';
+    } else if (size < 1024 * 1024) {
+      return '${(size / 1024).toStringAsFixed(1)} KB';
+    } else if (size < 1024 * 1024 * 1024) {
+      return '${(size / 1024 / 1024).toStringAsFixed(1)} MB';
+    } else {
+      return '${(size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB';
+    }
+  }
+
 
   Future<void> _configureRclone() async {
     final result = await Navigator.of(context).push<RcloneSettings?>(
@@ -319,14 +371,12 @@ class _FolderBrowserState extends State<FolderBrowser> {
       return;
     }
 
-    // Show remote directory dialog
     final remoteDirectory = await _promptForRemoteDirectory() ?? '/';
     if (!mounted) return;
 
     try {
       setState(() => _isLoading = true);
 
-      // Show confirmation dialog
       final shouldProceed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -355,7 +405,6 @@ class _FolderBrowserState extends State<FolderBrowser> {
         return;
       }
 
-      // Construct the rclone.conf content dynamically
       final String rcloneConfig = '''
 [${_rcloneSettings.remoteName}]
 type = ftp
@@ -365,13 +414,11 @@ user = ${_rcloneSettings.user}
 pass = ${_rcloneSettings.pass}
 ''';
 
-      // Save the rclone.conf to a temporary file
       final Directory tempDir = await getTemporaryDirectory();
       final File configFile = File('${tempDir.path}/rclone.conf');
       await configFile.writeAsString(rcloneConfig);
 
       try {
-        // Run rclone bisync using our manager
         final processResult = await RcloneManager.runRcloneWithConfig(
           [
             'bisync',
@@ -389,7 +436,6 @@ pass = ${_rcloneSettings.pass}
         if (mounted) {
           _showSnackBar('Sync completed successfully');
 
-          // Show results dialog
           await showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -412,7 +458,6 @@ pass = ${_rcloneSettings.pass}
           _showSnackBar('Error running sync: $e');
         }
       } finally {
-        // Clean up the temporary config file
         await configFile.delete();
       }
     } catch (e) {
@@ -498,7 +543,9 @@ pass = ${_rcloneSettings.pass}
                           _currentDirectory == null
                               ? null
                               : () {
-                                setState(() {}); // Refresh current directory
+                                setState(() {
+                                  _isLoading = true;
+                                });
                                 _navigateToDirectory(_currentDirectory!);
                               },
                       icon: const Icon(Icons.refresh),
@@ -621,15 +668,22 @@ pass = ${_rcloneSettings.pass}
               ),
             )
           else
-            ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return FileListItem(
-                  item: item,
-                  onTap: _handleItemTap,
-                );
+            RefreshIndicator(
+              onRefresh: () async {
+                if (_currentDirectory != null) {
+                  await _navigateToDirectory(_currentDirectory!);
+                }
               },
+              child: ListView.builder(
+                itemCount: _items.length,
+                itemBuilder: (context, index) {
+                  final item = _items[index];
+                  return FileListItem(
+                    item: item,
+                    onTap: _handleItemTap,
+                  );
+                },
+              ),
             ),
         ],
       ),
