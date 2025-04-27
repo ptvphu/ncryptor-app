@@ -110,39 +110,80 @@ class _FolderBrowserState extends State<FolderBrowser> {
   }
 
   Future<void> _loadStorageLocations() async {
-    _storageLocations.clear();
+    // Clear existing locations
+    _storageLocations = [];
 
     try {
+      // Track paths to avoid duplicates
+      final Set<String> addedPaths = {};
+
+      // Add home directory for desktop platforms first
+      if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
+        final homeDir = Directory(Platform.environment['HOME'] ?? '');
+        if (await homeDir.exists()) {
+          _storageLocations.add(homeDir);
+          addedPaths.add(homeDir.path);
+        }
+      }
+
+      // Add platform-specific locations next
       if (Platform.isAndroid) {
         if (await Permission.storage.request().isGranted) {
           final externalDir = await getExternalStorageDirectory();
-          if (externalDir != null) {
+          if (externalDir != null && !addedPaths.contains(externalDir.path)) {
             _storageLocations.add(externalDir);
+            addedPaths.add(externalDir.path);
           }
         }
       } else if (Platform.isIOS) {
-        final documentsDir = await getApplicationDocumentsDirectory();
-        _storageLocations.add(documentsDir);
         final libraryDir = await getLibraryDirectory();
-        _storageLocations.add(libraryDir);
-      } else if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
-        final homeDir = Directory(Platform.environment['HOME'] ?? '');
-        if (homeDir.existsSync()) {
-          _storageLocations.add(homeDir);
+        if (!addedPaths.contains(libraryDir.path)) {
+          _storageLocations.add(libraryDir);
+          addedPaths.add(libraryDir.path);
         }
-        final documentsDir = await getApplicationDocumentsDirectory();
-        _storageLocations.add(documentsDir);
       }
 
-      final appDocDir = await getApplicationDocumentsDirectory();
-      if (!_storageLocations.contains(appDocDir)) {
-        _storageLocations.insert(0, appDocDir);
+      // Add documents directory only if it's not already added (i.e., not the same as home)
+      final documentsDir = await getApplicationDocumentsDirectory();
+      if (!addedPaths.contains(documentsDir.path)) {
+        _storageLocations.add(documentsDir);
+        addedPaths.add(documentsDir.path);
+      }
+
+      // Add Downloads directory for all platforms
+      if (Platform.isAndroid) {
+        final downloadDir = Directory('/storage/emulated/0/Download');
+        if (await downloadDir.exists() &&
+            !addedPaths.contains(downloadDir.path)) {
+          _storageLocations.add(downloadDir);
+          addedPaths.add(downloadDir.path);
+        }
+      } else if (Platform.isIOS) {
+        final documentsDir = await getApplicationDocumentsDirectory();
+        final iosDownloadsDir = Directory('${documentsDir.path}/Downloads');
+        if (!await iosDownloadsDir.exists()) {
+          await iosDownloadsDir.create();
+        }
+        if (!addedPaths.contains(iosDownloadsDir.path)) {
+          _storageLocations.add(iosDownloadsDir);
+          addedPaths.add(iosDownloadsDir.path);
+        }
+      } else {
+        final downloadsDir = Directory(
+          '${Platform.environment['HOME']}/Downloads',
+        );
+        if (await downloadsDir.exists() &&
+            !addedPaths.contains(downloadsDir.path)) {
+          _storageLocations.add(downloadsDir);
+          addedPaths.add(downloadsDir.path);
+        }
       }
 
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
+      debugPrint('Error loading storage locations: $e');
       _showSnackBar('Error loading storage locations: $e');
     }
   }
@@ -173,7 +214,9 @@ class _FolderBrowserState extends State<FolderBrowser> {
           if (aIsDir && !bIsDir) return -1;
           if (!aIsDir && bIsDir) return 1;
 
-          return _getFileName(a).toLowerCase().compareTo(_getFileName(b).toLowerCase());
+          return _getFileName(
+            a,
+          ).toLowerCase().compareTo(_getFileName(b).toLowerCase());
         });
         _isLoading = false;
       });
@@ -194,40 +237,76 @@ class _FolderBrowserState extends State<FolderBrowser> {
   }
 
   Future<String> _getStorageLocationName(Directory dir) async {
+    // For Android
     if (Platform.isAndroid) {
       final externalDir = await getExternalStorageDirectory();
       if (dir.path == externalDir?.path) {
         return 'External Storage';
       }
+      if (dir.path == '/storage/emulated/0/Download') {
+        return 'Downloads';
+      }
     }
 
-    final documentsDir = await getApplicationDocumentsDirectory();
-    if (dir.path == documentsDir.path) {
-      return 'Documents';
-    }
-
+    // For iOS
     if (Platform.isIOS) {
+      final documentsDir = await getApplicationDocumentsDirectory();
+      if (dir.path == documentsDir.path) {
+        return 'Documents';
+      }
+      if (dir.path.endsWith('/Downloads')) {
+        return 'Downloads';
+      }
       final libraryDir = await getLibraryDirectory();
       if (dir.path == libraryDir.path) {
         return 'Library';
       }
     }
 
-    if ((Platform.isLinux || Platform.isMacOS || Platform.isWindows) &&
-        Platform.environment['HOME'] != null &&
-        dir.path == Platform.environment['HOME']) {
-      return 'Home';
+    // For desktop platforms
+    if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
+      if (Platform.environment['HOME'] != null &&
+          dir.path == Platform.environment['HOME']) {
+        return 'Home';
+      }
+      if (dir.path.endsWith('/Downloads')) {
+        return 'Downloads';
+      }
+      if (dir.path.endsWith('/Documents')) {
+        return 'Documents';
+      }
     }
 
-    return 'Storage';
+    // Application documents directory
+    final appDocDir = await getApplicationDocumentsDirectory();
+    if (dir.path == appDocDir.path) {
+      return 'App Documents';
+    }
+
+    // Default fallback
+    return dir.path.split('/').last;
   }
 
   Future<void> _selectFolder() async {
     try {
+      if (Platform.isLinux) {
+        try {
+          final result = await Process.run('which', ['zenity']);
+          if (result.exitCode != 0) {
+            _showLinuxFolderSelectionDialog();
+            return;
+          }
+        } catch (e) {
+          _showLinuxFolderSelectionDialog();
+          return;
+        }
+      }
+
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
 
       if (selectedDirectory != null && mounted) {
         final selectedDir = Directory(selectedDirectory);
+
         if (await selectedDir.exists()) {
           await _navigateToDirectory(selectedDir);
         } else {
@@ -243,10 +322,127 @@ class _FolderBrowserState extends State<FolderBrowser> {
     return entity.path.split(Platform.pathSeparator).last;
   }
 
+  void _showLinuxFolderSelectionDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Common Locations'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.home),
+                    title: const Text('Home Directory'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final homeDir = Directory(
+                        Platform.environment['HOME'] ?? '',
+                      );
+                      if (await homeDir.exists()) {
+                        await _navigateToDirectory(homeDir);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.description),
+                    title: const Text('Documents'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final docsDir = Directory(
+                        '${Platform.environment['HOME']}/Documents',
+                      );
+                      if (await docsDir.exists()) {
+                        await _navigateToDirectory(docsDir);
+                      } else {
+                        _showSnackBar('Documents directory not found');
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.download),
+                    title: const Text('Downloads'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final downloadsDir = Directory(
+                        '${Platform.environment['HOME']}/Downloads',
+                      );
+                      if (await downloadsDir.exists()) {
+                        await _navigateToDirectory(downloadsDir);
+                      } else {
+                        _showSnackBar('Downloads directory not found');
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.edit),
+                    title: const Text('Enter Path Manually'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showManualPathDialog();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showManualPathDialog() {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Enter Directory Path'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Path',
+                hintText: '/home/user/folder',
+              ),
+              autofocus: true,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final path = controller.text.trim();
+                  if (path.isNotEmpty) {
+                    final dir = Directory(path);
+                    if (await dir.exists()) {
+                      await _navigateToDirectory(dir);
+                    } else {
+                      _showSnackBar('Directory does not exist');
+                    }
+                  }
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
+
   void _showSnackBar(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleItemTap(FileSystemEntity item) {
@@ -257,68 +453,76 @@ class _FolderBrowserState extends State<FolderBrowser> {
 
       showModalBottomSheet(
         context: context,
-        builder: (context) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: Text(_getFileName(item)),
-              subtitle: FutureBuilder<FileStat>(
-                future: item.stat(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    final modified = snapshot.data!.modified;
-                    final size = snapshot.data!.size;
-                    final sizeStr = _formatFileSize(size);
-                    return Text('$sizeStr • ${modified.toString().substring(0, 16)}');
-                  }
-                  return const Text('Loading...');
-                },
-              ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+        builder:
+            (context) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.info),
+                  title: Text(_getFileName(item)),
+                  subtitle: FutureBuilder<FileStat>(
+                    future: item.stat(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final modified = snapshot.data!.modified;
+                        final size = snapshot.data!.size;
+                        final sizeStr = _formatFileSize(size);
+                        return Text(
+                          '$sizeStr • ${modified.toString().substring(0, 16)}',
+                        );
+                      }
+                      return const Text('Loading...');
+                    },
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.share),
+                  title: const Text('Share'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('Delete'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _deleteFile(item as File);
+                  },
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete),
-              title: const Text('Delete'),
-              onTap: () async {
-                Navigator.pop(context);
-                await _deleteFile(item as File);
-              },
-            ),
-          ],
-        ),
       );
     }
   }
 
   Future<void> _deleteFile(File file) async {
     try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Confirm Delete'),
-          content: Text('Are you sure you want to delete ${_getFileName(file)}?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      ) ?? false;
+      final confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Confirm Delete'),
+                  content: Text(
+                    'Are you sure you want to delete ${_getFileName(file)}?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+          ) ??
+          false;
 
       if (confirmed) {
         await file.delete();
@@ -343,7 +547,6 @@ class _FolderBrowserState extends State<FolderBrowser> {
       return '${(size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB';
     }
   }
-
 
   Future<void> _configureRclone() async {
     final result = await Navigator.of(context).push<RcloneSettings?>(
@@ -377,28 +580,31 @@ class _FolderBrowserState extends State<FolderBrowser> {
     try {
       setState(() => _isLoading = true);
 
-      final shouldProceed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Confirm Sync'),
-          content: Text(
-            'This will sync:\n\n'
-            'Local: ${_currentDirectory!.path}\n'
-            'Remote: ${_rcloneSettings.remoteName}:$remoteDirectory\n\n'
-            'Do you want to continue?'
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sync'),
-            ),
-          ],
-        ),
-      ) ?? false;
+      final shouldProceed =
+          await showDialog<bool>(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Confirm Sync'),
+                  content: Text(
+                    'This will sync:\n\n'
+                    'Local: ${_currentDirectory!.path}\n'
+                    'Remote: ${_rcloneSettings.remoteName}:$remoteDirectory\n\n'
+                    'Do you want to continue?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Sync'),
+                    ),
+                  ],
+                ),
+          ) ??
+          false;
 
       if (!shouldProceed || !mounted) {
         setState(() => _isLoading = false);
@@ -419,16 +625,14 @@ pass = ${_rcloneSettings.pass}
       await configFile.writeAsString(rcloneConfig);
 
       try {
-        final processResult = await RcloneManager.runRcloneWithConfig(
-          [
-            'bisync',
-            _currentDirectory!.path,
-            '${_rcloneSettings.remoteName}:$remoteDirectory',
-            '--conflict-resolve', 'newer',
-            '--verbose'
-          ],
-          configFile.path
-        );
+        final processResult = await RcloneManager.runRcloneWithConfig([
+          'bisync',
+          _currentDirectory!.path,
+          '${_rcloneSettings.remoteName}:$remoteDirectory',
+          '--conflict-resolve',
+          'newer',
+          '--verbose',
+        ], configFile.path);
 
         debugPrint('Bisync stdout: ${processResult.stdout}');
         debugPrint('Bisync stderr: ${processResult.stderr}');
@@ -438,18 +642,19 @@ pass = ${_rcloneSettings.pass}
 
           await showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Sync Results'),
-              content: SingleChildScrollView(
-                child: Text(processResult.stdout.toString()),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Sync Results'),
+                  content: SingleChildScrollView(
+                    child: Text(processResult.stdout.toString()),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
           );
         }
       } catch (e) {
@@ -474,27 +679,28 @@ pass = ${_rcloneSettings.pass}
 
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remote Directory'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Remote path',
-            hintText: '/',
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Remote Directory'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Remote path',
+                hintText: '/',
+              ),
+              autofocus: true,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(null),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(controller.text),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -678,10 +884,7 @@ pass = ${_rcloneSettings.pass}
                 itemCount: _items.length,
                 itemBuilder: (context, index) {
                   final item = _items[index];
-                  return FileListItem(
-                    item: item,
-                    onTap: _handleItemTap,
-                  );
+                  return FileListItem(item: item, onTap: _handleItemTap);
                 },
               ),
             ),

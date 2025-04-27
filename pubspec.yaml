@@ -1,5 +1,5 @@
 name: ncryptor
-description: "internal prototype"
+description: "Storage and sync manager"
 publish_to: 'none'
 version: 1.0.0+1
 
