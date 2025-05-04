@@ -6,6 +6,10 @@ Cross-platform user interface for encrypted storage app
 
 ### Visual Studio Code
 
+```bash
+sudo apt install build-essential clang cmake libsecret-1-dev libstdc++-14-dev
+```
+
 * https://wiki.debian.org/VisualStudioCode
 
 ```bash
