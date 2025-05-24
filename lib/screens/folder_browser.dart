@@ -631,6 +631,7 @@ pass = ${_rcloneSettings.pass}
           '${_rcloneSettings.remoteName}:$remoteDirectory',
           '--conflict-resolve',
           'newer',
+          '--resync',
           '--verbose',
         ], configFile.path);
 
