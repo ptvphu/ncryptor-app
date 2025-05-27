@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 import '../models/rclone_settings.dart';
 import '../utils/rclone_manager.dart';
@@ -623,12 +624,19 @@ pass = ${_rcloneSettings.pass}
       final Directory tempDir = await getTemporaryDirectory();
       final File configFile = File('${tempDir.path}/rclone.conf');
       await configFile.writeAsString(rcloneConfig);
+      // from path_provider
+      final workDir = Directory('${tempDir.path}/rclone_work');
+
+      if (!await workDir.exists()) await workDir.create(recursive: true);
 
       try {
         final processResult = await RcloneManager.runRcloneWithConfig([
           'bisync',
           _currentDirectory!.path,
+          '--workdir', workDir.path,
           '${_rcloneSettings.remoteName}:$remoteDirectory',
+          '--config',
+          configFile.path,
           '--conflict-resolve',
           'newer',
           '--resync',
