@@ -73,6 +73,8 @@ class RcloneManager {
         return 'arm';
       } else if (androidInfo.contains('x86_64')) {
         return 'x86_64';
+      } else if (androidInfo.contains('android_x64')) {
+        return 'android_x64';
       } else {
         return 'x86';
       }
@@ -188,10 +190,24 @@ class RcloneManager {
     List<String> arguments,
     String configPath,
   ) async {
+    
     final rclonePath = await getRclonePath();
-    final results = await run(
-      '$rclonePath ${arguments.join(' ')} --config $configPath',
+    final args = [
+      ...arguments,
+      '--config',
+      configPath,
+    ];
+    
+    final result = await Process.run(
+      rclonePath,
+      args,
+      runInShell: true,
     );
-    return results[0];
+    // print detail stdout + stderr for debug
+    print('📦 rclone exitCode=${result.exitCode}');
+    print('📦 rclone stdout:\n${result.stdout}');
+    print('📦 rclone stderr:\n${result.stderr}');
+    return result;
   }
+  
 }

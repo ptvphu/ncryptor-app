@@ -26,8 +26,9 @@ dev_dependencies:
 
 flutter:
   assets:
+    - assets/rclone_data/
     - assets/android/arm64-v8a/rclone
-    # - assets/android/armeabi-v7a/rclone
+    - assets/rclone/android_x64/rclone
     # - assets/android/x86_64/rclone
     # - assets/android/x86/rclone
     # - assets/ios/arm64/
