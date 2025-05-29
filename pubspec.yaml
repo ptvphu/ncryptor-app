@@ -29,14 +29,6 @@ flutter:
     - assets/rclone_data/
     - assets/android/arm64-v8a/rclone
     - assets/rclone/android_x64/rclone
+    - assets/rclone/arm64/rclone
     - assets/rclone/x86_64/rclone.exe
-    # - assets/android/x86/rclone
-    # - assets/ios/arm64/
-    # - assets/ios/x86_64/
-    # - assets/linux/arm64/
-    # - assets/linux/x86_64/
-    # - assets/macos/arm64/
-    # - assets/macos/x86_64/
-    # - assets/windows/x64/
-    # - assets/windows/x86/
   uses-material-design: true
