@@ -2,13 +2,33 @@
 
 Cross-platform user interface for encrypted storage app
 
-## Local Setup (Debian)
+## Developer Setup (ChromeOS)
 
-### Visual Studio Code
+### Linux development environment
+
+* Settings > About ChromeOS > Linux development environment > Set up
+    * Set storage size to at least 25 GB
+
+### zsh
 
 ```bash
-sudo apt install build-essential clang cmake libsecret-1-dev libstdc++-14-dev
+sudo apt update
+sudo apt install -y zsh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 ```
+
+### git
+
+```bash
+git config --global user.name "<name>"
+git config --global user.email "<email>"
+$(eval ssh-agent -s)
+ssh-add -k ~/.ssh/<rsa key>
+cd ~/Projects/bootsworldwide
+git clone git@github.com:bootsworldwide/safelabs-ncryptor-flutter.git
+```
+
+### Visual Studio Code
 
 * https://wiki.debian.org/VisualStudioCode
 
@@ -16,11 +36,13 @@ sudo apt install build-essential clang cmake libsecret-1-dev libstdc++-14-dev
 curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
 sudo install -o root -g root -m 644 microsoft.gpg /etc/apt/keyrings/microsoft-archive-keyring.gpg
 sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
-sudo apt-get update
-sudo apt-get install code
+sudo apt update
+sudo apt install -y code
 ```
 
-* https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
+https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
+
+* Press "Ctrl + e", then type:
 
 ```text
 ext install Dart-Code.flutter
@@ -31,7 +53,9 @@ ext install Dart-Code.flutter
 * https://docs.flutter.dev/get-started/install/linux/android
 
 ```bash
-sudo apt install -y curl git libglu1-mesa software-properties-common unzip xz-utils zip
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y curl git libglu1-mesa software-properties-common unzip xz-utils unzip zip
 sudo apt install -y lib32z1 libbz2-1.0:amd64 libc6:amd64 libstdc++6:amd64
 sudo dpkg --add-architecture i386
 sudo apt update
