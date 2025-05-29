@@ -22,8 +22,10 @@ class RcloneManager {
     if (!await binDir.exists()) {
       await binDir.create(recursive: true);
     }
+    final rclonePath = Platform.isWindows 
+          ? '${binDir.path}/rclone.exe'
+          : '${binDir.path}/rclone';
 
-    final rclonePath = '${binDir.path}/rclone';
     final rcloneFile = File(rclonePath);
 
     // Check if rclone is already installed
@@ -42,7 +44,7 @@ class RcloneManager {
 
     // Install the appropriate binary for the current architecture
     String arch = _getArchitecture();
-    String assetPath = '$_assetBasePath$arch/rclone';
+    String assetPath = '$_assetBasePath$arch/rclone${Platform.isWindows ? '.exe' : ''}';
 
     try {
       // Copy binary from assets
@@ -53,8 +55,10 @@ class RcloneManager {
       );
       await rcloneFile.writeAsBytes(bytes);
 
-      // Make executable
-      await _makeExecutable(rclonePath);
+      // Make executable (only for non-Windows)
+      if (!Platform.isWindows) {
+        await _makeExecutable(rclonePath);
+      }
 
       return rclonePath;
     } catch (e) {
@@ -64,7 +68,9 @@ class RcloneManager {
 
   // Determine the device architecture
   static String _getArchitecture() {
-    if (Platform.isAndroid) {
+    if (Platform.isWindows) {
+      return 'x86_64'; 
+    } else if (Platform.isAndroid) {
       // On Android, we need to determine the architecture
       var androidInfo = Platform.version;
       if (androidInfo.contains('arm64')) {
