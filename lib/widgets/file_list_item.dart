@@ -7,10 +7,10 @@ class FileListItem extends StatelessWidget {
   final Function(FileSystemEntity) onTap;
   
   const FileListItem({
-    Key? key, 
+    super.key,
     required this.item, 
     required this.onTap
-  }) : super(key: key);
+  });
 
   String _getFileName(FileSystemEntity entity) {
     return entity.path.split(Platform.pathSeparator).last;

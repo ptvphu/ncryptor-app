@@ -9,15 +9,31 @@ Cross-platform user interface for encrypted storage app
 * Settings > About ChromeOS > Linux development environment > Set up
     * Set storage size to at least 25 GB
 
-### zsh
+```bash
+sudo apt update
+sudo apt install -y build-essential clang cmake lld gnome-keyring libgtk-3-dev libsecret-1-dev libjsoncpp-dev libsecret-1-0 libx11-dev libfontconfig1-dev liblzma-dev libstdc++-12-dev ninja-build pkg-config
+gsettings set org.gnome.desktop.interface cursor-theme "Adwaita"
+gsettings set org.gnome.desktop.interface cursor-size 24
+```
+
+### Zsh
 
 ```bash
 sudo apt update
 sudo apt install -y zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+echo '
+# Fix for Flutter flickering and cursor issues on Crostini/Wayland
+export GDK_BACKEND=x11
+export XDG_SESSION_TYPE=wayland
+export XCURSOR_SIZE=24
+export XCURSOR_SIZE_LOW_DENSITY=15
+' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-### git
+### Git
 
 ```bash
 git config --global user.name "<name>"
@@ -26,6 +42,16 @@ $(eval ssh-agent -s)
 ssh-add -k ~/.ssh/<rsa key>
 cd ~/Projects/bootsworldwide
 git clone git@github.com:bootsworldwide/safelabs-ncryptor-flutter.git
+```
+
+### Flutter
+
+```bash
+mkdir ~/Downloads
+cd ~/Downloads
+wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.1-stable.tar.xz
+mkdir ~/development
+tar -xf ~/Downloads/flutter_linux_3.32.1-stable.tar.xz -C ~/development/
 ```
 
 ### Visual Studio Code
@@ -47,6 +73,8 @@ https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
 ```text
 ext install Dart-Code.flutter
 ```
+
+* set flutter SDK path to ~/development/flutter
 
 ### Android Studio
 
@@ -87,19 +115,15 @@ sudo apt update
 sudo apt install -y google-chrome-stable
 ```
 
-### Flutter
-
-```bash
-mkdir ~/development
-mv flutter_linux_3.29.2-stable.tar.xz ~/development
-tar -xf flutter_linux_3.29.2-stable.tar.xz
-echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zshenv
-flutter doctor --android-licenses
-sudo apt install -y clang cmake libgtk-3-dev liblzma-dev libstdc++-12-dev ninja-build pkg-config
-flutter doctor
-```
+### Test app
 
 * fix `flutter doctor` issues
+
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
 
 ### Flutter Tutorial
 
