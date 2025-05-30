@@ -22,11 +22,9 @@ class RcloneManager {
     if (!await binDir.exists()) {
       await binDir.create(recursive: true);
     }
-
-    // Thêm .exe cho Windows
     final rclonePath = Platform.isWindows 
-      ? '${binDir.path}/rclone.exe'
-      : '${binDir.path}/rclone';
+          ? '${binDir.path}/rclone.exe'
+          : '${binDir.path}/rclone';
 
     final rcloneFile = File(rclonePath);
 
