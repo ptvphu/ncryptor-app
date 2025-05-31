@@ -2,16 +2,18 @@
 
 Cross-platform user interface for encrypted storage app
 
-## Developer Setup (ChromeOS)
+## Developer Setup (Linux)
 
-### Linux development environment
+### Linux development environment (ChromeOS)
 
 * Settings > About ChromeOS > Linux development environment > Set up
     * Set storage size to at least 25 GB
 
+### Linux packages
+
 ```bash
 sudo apt update
-sudo apt install -y build-essential clang cmake lld gnome-keyring libgtk-3-dev libsecret-1-dev libjsoncpp-dev libsecret-1-0 libx11-dev libfontconfig1-dev liblzma-dev libstdc++-12-dev ninja-build pkg-config
+sudo apt install -y build-essential clang cmake lld gnome-keyring libgtk-3-dev libsecret-1-dev libjsoncpp-dev libsecret-1-0 libx11-dev libfontconfig1-dev liblzma-dev libstdc++-12-dev mesa-utils ninja-build pkg-config
 gsettings set org.gnome.desktop.interface cursor-theme "Adwaita"
 gsettings set org.gnome.desktop.interface cursor-size 24
 ```
@@ -66,17 +68,32 @@ sudo apt update
 sudo apt install -y code
 ```
 
-https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
-
+* https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
 * Press "Ctrl + e", then type:
 
 ```text
 ext install Dart-Code.flutter
 ```
 
-* set flutter SDK path to ~/development/flutter
+* set flutter SDK path to `~/development/flutter`
+
+### Test Linux Desktop App
+
+In VSCode, open `lib/main.dart`, click top right on "Start Debugging", or:
+
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
 
 ### Android Studio
+
+* https://developer.android.com/studio/run/emulator-acceleration?utm_source=android-studio#vm-linux
+
+```bash
+sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+```
 
 * https://docs.flutter.dev/get-started/install/linux/android
 
@@ -90,14 +107,22 @@ sudo apt update
 sudo apt install -y libc6:i386 libncurses5:i386 libstdc++6:i386 lib32z1 libbz2-1.0:i386
 ```
 
-* https://developer.android.com/studio
+* Download Android Studio for Linux
+  * https://developer.android.com/studio
+
+* https://developer.android.com/codelabs/basic-android-kotlin-compose-install-android-studio#6
 
 ```bash
-tar -zxf android-studio-2024.3.1.13-linux.tar.gz
-sudo mv android-studio /usr/local 
-cd /usr/local/android-studio/bin 
-./studio.sh
+cd ~/Downloads
+tar -xzf android-studio-2024.3.2.15-linux.tar.gz
+sudo mv android-studio /usr/local
+echo "export PATH=\"/usr/local/android-studio/bin:\$PATH\"" >> ~/.zshrc
+source ~/.zshrc
+studio.sh
 ```
+
+* Install Type: Custom
+  * Android SDK Location: ~/Android/Sdk
 
 * Settings > SDK Manager > Android SDK
     * Android SDK Platform, API 35.0.2
@@ -105,6 +130,25 @@ cd /usr/local/android-studio/bin
     * Android SDK Build-Tools
     * Android SDK Platform-Tools
     * Android Emulator
+
+### Android Studio Tools
+
+* https://developer.android.com/studio#command-line-tools-only
+
+```bash
+cd ~/Downloads
+unzip commandlinetools-linux-13114758_latest.zip
+mkdir -p ~/Android/Sdk/cmdline-tools
+mv cmdline-tools ~/Android/Sdk/cmdline-tools/latest
+echo '
+# Android SDK Environment Variables
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+' >> ~/.zshrc
+source ~/.zshrc
+flutter doctor --android-licenses
+```
 
 ### Google Chrome
 
@@ -115,15 +159,15 @@ sudo apt update
 sudo apt install -y google-chrome-stable
 ```
 
+### Android Emulator
+
+* Open Android Studio with `studio`
+* Under "More Actions", select "Virtual Device Manager"
+* Create a Pixel 9 emulator
+
 ### Test app
 
 * fix `flutter doctor` issues
-
-```bash
-flutter clean
-flutter pub get
-flutter run
-```
 
 ### Flutter Tutorial
 
