@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # safelabs-ncryptor-flutter
 
 Cross-platform user interface for encrypted storage app
@@ -172,3 +173,6 @@ sudo apt install -y google-chrome-stable
 ### Flutter Tutorial
 
 * https://docs.flutter.dev/get-started/codelab
+=======
+# ncryptor-app
+>>>>>>> fcfda52b44531ac2375a9a828e970034bfaf980f
