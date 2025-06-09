@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+
 # safelabs-ncryptor-flutter
 
 Cross-platform user interface for encrypted storage app
@@ -7,8 +8,8 @@ Cross-platform user interface for encrypted storage app
 
 ### Linux development environment (ChromeOS)
 
-* Settings > About ChromeOS > Linux development environment > Set up
-    * Set storage size to at least 25 GB
+- Settings > About ChromeOS > Linux development environment > Set up
+  - Set storage size to at least 25 GB
 
 ### Linux packages
 
@@ -59,7 +60,7 @@ tar -xf ~/Downloads/flutter_linux_3.32.1-stable.tar.xz -C ~/development/
 
 ### Visual Studio Code
 
-* https://wiki.debian.org/VisualStudioCode
+- https://wiki.debian.org/VisualStudioCode
 
 ```bash
 curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
@@ -69,14 +70,14 @@ sudo apt update
 sudo apt install -y code
 ```
 
-* https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
-* Press "Ctrl + e", then type:
+- https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
+- Press "Ctrl + e", then type:
 
 ```text
 ext install Dart-Code.flutter
 ```
 
-* set flutter SDK path to `~/development/flutter`
+- set flutter SDK path to `~/development/flutter`
 
 ### Test Linux Desktop App
 
@@ -90,13 +91,13 @@ flutter run
 
 ### Android Studio
 
-* https://developer.android.com/studio/run/emulator-acceleration?utm_source=android-studio#vm-linux
+- https://developer.android.com/studio/run/emulator-acceleration?utm_source=android-studio#vm-linux
 
 ```bash
 sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
 ```
 
-* https://docs.flutter.dev/get-started/install/linux/android
+- https://docs.flutter.dev/get-started/install/linux/android
 
 ```bash
 sudo apt update
@@ -108,10 +109,11 @@ sudo apt update
 sudo apt install -y libc6:i386 libncurses5:i386 libstdc++6:i386 lib32z1 libbz2-1.0:i386
 ```
 
-* Download Android Studio for Linux
-  * https://developer.android.com/studio
+- Download Android Studio for Linux
 
-* https://developer.android.com/codelabs/basic-android-kotlin-compose-install-android-studio#6
+  - https://developer.android.com/studio
+
+- https://developer.android.com/codelabs/basic-android-kotlin-compose-install-android-studio#6
 
 ```bash
 cd ~/Downloads
@@ -122,19 +124,20 @@ source ~/.zshrc
 studio.sh
 ```
 
-* Install Type: Custom
-  * Android SDK Location: ~/Android/Sdk
+- Install Type: Custom
 
-* Settings > SDK Manager > Android SDK
-    * Android SDK Platform, API 35.0.2
-    * Android SDK Command-line Tools
-    * Android SDK Build-Tools
-    * Android SDK Platform-Tools
-    * Android Emulator
+  - Android SDK Location: ~/Android/Sdk
+
+- Settings > SDK Manager > Android SDK
+  - Android SDK Platform, API 35.0.2
+  - Android SDK Command-line Tools
+  - Android SDK Build-Tools
+  - Android SDK Platform-Tools
+  - Android Emulator
 
 ### Android Studio Tools
 
-* https://developer.android.com/studio#command-line-tools-only
+- https://developer.android.com/studio#command-line-tools-only
 
 ```bash
 cd ~/Downloads
@@ -162,17 +165,18 @@ sudo apt install -y google-chrome-stable
 
 ### Android Emulator
 
-* Open Android Studio with `studio`
-* Under "More Actions", select "Virtual Device Manager"
-* Create a Pixel 9 emulator
+- Open Android Studio with `studio`
+- Under "More Actions", select "Virtual Device Manager"
+- Create a Pixel 9 emulator
 
 ### Test app
 
-* fix `flutter doctor` issues
+- fix `flutter doctor` issues
 
 ### Flutter Tutorial
 
-* https://docs.flutter.dev/get-started/codelab
-=======
+- # https://docs.flutter.dev/get-started/codelab
+
 # ncryptor-app
->>>>>>> fcfda52b44531ac2375a9a828e970034bfaf980f
+
+> > > > > > > fcfda52b44531ac2375a9a828e970034bfaf980f
